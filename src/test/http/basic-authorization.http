@@ -1,0 +1,73 @@
+### 1 GET all devices - happy path
+GET http://localhost:8080/api/v1/devices
+Authorization: Basic admin admin
+Accept: application/json
+
+### 2 GET all devices - bad credentials
+GET http://localhost:8080/api/v1/devices
+Authorization: Basic admin1 admin
+Accept: application/json
+
+### 3 GET one device - happy path
+GET http://localhost:8080/api/v1/devices/2
+Authorization: Basic admin admin
+Accept: application/json
+
+### 4 GET one device - bad credentials
+GET http://localhost:8080/api/v1/devices/2
+Authorization: Basic admin1 admin
+Accept: application/json
+
+### 5 POST create device - happy path
+POST http://localhost:8080/api/v1/devices
+Authorization: Basic admin admin
+Content-Type: application/json
+
+{
+  "name": "switch-04",
+  "type": "switch",
+  "owner": "it-department"
+}
+
+### 6 POST create device - bad credentials
+POST http://localhost:8080/api/v1/devices
+Authorization: Basic admin1 admin
+Content-Type: application/json
+
+{
+  "name": "switch-04",
+  "type": "switch",
+  "owner": "it-department"
+}
+
+### 7 PUT update device - happy path
+PUT http://localhost:8080/api/v1/devices/2
+Authorization: Basic admin admin
+Content-Type: application/json
+
+{
+  "name": "printer-02-renamed",
+  "type": "printer",
+  "owner": "security"
+}
+
+### 8 PUT update device - bad credentials
+PUT http://localhost:8080/api/v1/devices/2
+Authorization: Basic admin1 admin
+Content-Type: application/json
+
+{
+  "name": "printer-02-renamed",
+  "type": "printer",
+  "owner": "security"
+}
+
+### 9 DELETE device - happy path
+DELETE http://localhost:8080/api/v1/devices/3
+Authorization: Basic admin admin
+Accept: application/json
+
+### 10 DELETE device - bad credentials
+DELETE http://localhost:8080/api/v1/devices/3
+Authorization: Basic admin1 admin
+Accept: application/json
