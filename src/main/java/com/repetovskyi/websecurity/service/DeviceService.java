@@ -24,14 +24,14 @@ public class DeviceService {
     private final Map<String, Device> devices = new LinkedHashMap<>();
 
     public DeviceService() {
-        seed("router-01", "router", "it-department");
-        seed("printer-02", "printer", "accounting");
-        seed("laptop-03", "laptop", "r.vladyslav");
+        seed("1", "router-01", "router", "it-department");
+        seed("2", "printer-02", "printer", "accounting");
+        seed("3", "laptop-03", "laptop", "r.vladyslav");
     }
 
-    private void seed(String name, String type, String owner) {
+    private void seed(String id, String name, String type, String owner) {
         Device device = Device.builder()
-                .id(UUID.randomUUID().toString())
+                .id(id)
                 .name(name)
                 .type(type)
                 .owner(owner)
