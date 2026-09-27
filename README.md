@@ -1,5 +1,5 @@
-# Lab 3: Basic authorization
+# Lab 4: CSRF and audit
 
-### src/test/http/basic-authorization.http
+### src/test/http/csrf-audit.http
 
-![](3/all-tests.png)
+![](4/all-tests.png)
