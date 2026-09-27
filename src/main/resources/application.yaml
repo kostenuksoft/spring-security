@@ -5,3 +5,7 @@ spring:
     user:
       name: admin
       password: admin
+  mongodb:
+    host: localhost
+    port: 27017
+    database: web-security
