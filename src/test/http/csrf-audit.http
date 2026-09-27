@@ -1,0 +1,36 @@
+###1. GET all devices
+GET http://localhost:8080/api/v1/devices
+Authorization: Basic admin admin
+Accept: application/json
+
+###2. GET one device
+GET http://localhost:8080/api/v1/devices/2
+Authorization: Basic admin admin
+Accept: application/json
+
+###3. CREATE one device
+POST http://localhost:8080/api/v1/devices
+Authorization: Basic admin admin
+Content-Type: application/json
+
+{
+  "name": "switch-04",
+  "type": "switch",
+  "owner": "it-department"
+}
+
+###4. UPDATE one device
+PUT http://localhost:8080/api/v1/devices/2
+Authorization: Basic admin admin
+Content-Type: application/json
+
+{
+  "name": "printer-02-renamed",
+  "type": "printer",
+  "owner": "security"
+}
+
+###5. DELETE one device
+DELETE http://localhost:8080/api/v1/devices/3
+Authorization: Basic admin admin
+Accept: application/json
