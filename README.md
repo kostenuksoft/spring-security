@@ -1,5 +1,5 @@
-# Lab 4: CSRF and audit
+# Lab 5: Multi-user
 
-### src/test/http/csrf-audit.http
+### src/test/http/multi-user.http
 
-![](4/all-tests.png)
+![](5/all-tests.png)
