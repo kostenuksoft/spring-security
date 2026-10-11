@@ -4,13 +4,14 @@ package com.repetovskyi.websecurity.controller;
   @author   Repetovskyi V.
   @project   web-security
   @class  DeviceReportController
-  @version  1.0.0 
+  @version  1.1.0
   @since 10/3/2026 - 09.03
 */
 
 import com.repetovskyi.websecurity.model.Device;
 import com.repetovskyi.websecurity.service.DeviceService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -28,12 +29,14 @@ public class DeviceReportController {
 
     private final DeviceService deviceService;
 
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'SUPERADMIN')")
     @GetMapping("/summary")
     public Map<String, Long> summary() {
         return deviceService.findAll().stream()
                 .collect(Collectors.groupingBy(Device::getType, TreeMap::new, Collectors.counting()));
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPERADMIN')")
     @GetMapping("/owners")
     public Map<String, List<String>> owners() {
         return deviceService.findAll().stream()
@@ -41,6 +44,7 @@ public class DeviceReportController {
                         Collectors.mapping(Device::getName, Collectors.toList())));
     }
 
+    @PreAuthorize("hasRole('SUPERADMIN')")
     @GetMapping("/audit")
     public List<AuditEntry> audit() {
         return deviceService.findAll().stream()

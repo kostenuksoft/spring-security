@@ -1,5 +1,5 @@
-# Lab 5: Multi-user
+# Lab 6: Annotations
 
-### src/test/http/multi-user.http
+### src/test/http/annotations.http
 
-![](5/all-tests.png)
+![](6/all-tests.png)
