@@ -4,7 +4,7 @@ package com.repetovskyi.websecurity.controller;
   @author   Repetovskyi V.
   @project   web-security
   @class  DeviceController
-  @version  1.0.0 
+  @version  1.1.0
   @since 9/12/2026 - 19.12
 */
 
@@ -13,6 +13,7 @@ import com.repetovskyi.websecurity.service.DeviceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -36,12 +37,14 @@ public class DeviceController {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPERADMIN')")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public Device create(@RequestBody Device device) {
         return deviceService.create(device);
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPERADMIN')")
     @PutMapping("/{id}")
     public ResponseEntity<Device> update(@PathVariable String id, @RequestBody Device device) {
         return deviceService.update(id, device)
@@ -49,6 +52,7 @@ public class DeviceController {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
+    @PreAuthorize("hasRole('SUPERADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable String id) {
         return deviceService.delete(id)
