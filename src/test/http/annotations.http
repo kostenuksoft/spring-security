@@ -1,0 +1,129 @@
+###1. ANONYMOUS index page - 200
+GET http://localhost:8080/index.html
+
+###2. ANONYMOUS get all devices - 401
+GET http://localhost:8080/api/v1/devices
+Accept: application/json
+
+###3. USER wrong password - 401
+GET http://localhost:8080/api/v1/devices
+Authorization: Basic user wrong
+Accept: application/json
+
+###4. USER get all devices - 200
+GET http://localhost:8080/api/v1/devices
+Authorization: Basic user user
+Accept: application/json
+
+###5. USER get one device - 200
+GET http://localhost:8080/api/v1/devices/2
+Authorization: Basic user user
+Accept: application/json
+
+###6. USER create device - 403
+POST http://localhost:8080/api/v1/devices
+Authorization: Basic user user
+Content-Type: application/json
+
+{
+  "name": "tablet-04",
+  "type": "tablet",
+  "owner": "sales"
+}
+
+###7. USER update device - 403
+PUT http://localhost:8080/api/v1/devices/2
+Authorization: Basic user user
+Content-Type: application/json
+
+{
+  "name": "printer-02",
+  "type": "printer",
+  "owner": "sales"
+}
+
+###8. USER delete device - 403
+DELETE http://localhost:8080/api/v1/devices/1
+Authorization: Basic user user
+
+###9. USER summary report - 200
+GET http://localhost:8080/api/v1/reports/summary
+Authorization: Basic user user
+Accept: application/json
+
+###10. USER owners report - 403
+GET http://localhost:8080/api/v1/reports/owners
+Authorization: Basic user user
+Accept: application/json
+
+###11. ADMIN create device - 201
+POST http://localhost:8080/api/v1/devices
+Authorization: Basic admin admin
+Content-Type: application/json
+
+{
+  "name": "switch-04",
+  "type": "switch",
+  "owner": "it-department"
+}
+
+###12. ADMIN update device - 200
+PUT http://localhost:8080/api/v1/devices/2
+Authorization: Basic admin admin
+Content-Type: application/json
+
+{
+  "name": "printer-02",
+  "type": "printer",
+  "owner": "hr"
+}
+
+###13. ADMIN delete device - 403
+DELETE http://localhost:8080/api/v1/devices/1
+Authorization: Basic admin admin
+
+###14. ADMIN owners report - 200
+GET http://localhost:8080/api/v1/reports/owners
+Authorization: Basic admin admin
+Accept: application/json
+
+###15. ADMIN audit report - 403
+GET http://localhost:8080/api/v1/reports/audit
+Authorization: Basic admin admin
+Accept: application/json
+
+###16. SUPERADMIN create device - 201
+POST http://localhost:8080/api/v1/devices
+Authorization: Basic superadmin superadmin
+Content-Type: application/json
+
+{
+  "name": "firewall-05",
+  "type": "firewall",
+  "owner": "security"
+}
+
+###17. SUPERADMIN update device - 200
+PUT http://localhost:8080/api/v1/devices/1
+Authorization: Basic superadmin superadmin
+Content-Type: application/json
+
+{
+  "name": "router-01",
+  "type": "router",
+  "owner": "security"
+}
+
+###18. SUPERADMIN delete device - 204
+DELETE http://localhost:8080/api/v1/devices/3
+Authorization: Basic superadmin superadmin
+
+###19. SUPERADMIN audit report - 200
+GET http://localhost:8080/api/v1/reports/audit
+Authorization: Basic superadmin superadmin
+Accept: application/json
+
+###20. SUPERADMIN summary report - 200
+GET http://localhost:8080/api/v1/reports/summary
+Authorization: Basic superadmin superadmin
+Accept: application/json
