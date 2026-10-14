@@ -1,5 +1,5 @@
-# Lab 6: Annotations
+# Lab 7: Access testing
 
-### src/test/http/annotations.http
+### src/test/java/com/repetovskyi/websecurity/AccessControlTests.java
 
-![](6/all-tests.png)
+![](7/all-tests.png)
