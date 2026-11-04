@@ -1,0 +1,52 @@
+###1. ANONYMOUS get all devices without token - 401
+GET http://localhost:8080/api/v1/devices
+Accept: application/json
+
+###2. ADMIN get token with wrong password - 401
+POST http://localhost:8080/api/v1/auth/authenticate
+Content-Type: application/json
+
+{
+  "email": "m.taras@registry.local",
+  "password": "wrong"
+}
+
+###3. UNKNOWN get token with unregistered email - 401
+POST http://localhost:8080/api/v1/auth/authenticate
+Content-Type: application/json
+
+{
+  "email": "h.petro@registry.local",
+  "password": "user"
+}
+
+###4. ANONYMOUS get token without body - 400
+POST http://localhost:8080/api/v1/auth/authenticate
+Content-Type: application/json
+
+###5. USER get token - 200
+POST http://localhost:8080/api/v1/auth/authenticate
+Content-Type: application/json
+
+{
+  "email": "k.olena@registry.local",
+  "password": "user"
+}
+
+###6. SUPERADMIN get token - 200
+POST http://localhost:8080/api/v1/auth/authenticate
+Content-Type: application/json
+
+{
+  "email": "r.vladyslav@registry.local",
+  "password": "superadmin"
+}
+
+###7. ADMIN get token - 200
+POST http://localhost:8080/api/v1/auth/authenticate
+Content-Type: application/json
+
+{
+  "email": "m.taras@registry.local",
+  "password": "admin"
+}

@@ -4,17 +4,22 @@ package com.repetovskyi.websecurity;
   @author   Repetovskyi V.
   @project   web-security
   @class  AccessControlTests
-  @version  1.0.0 
+  @version  1.2.0
   @since 10/14/2026 - 20.20
 */
 
 import com.jayway.jsonpath.JsonPath;
 import com.repetovskyi.websecurity.model.Device;
 import com.repetovskyi.websecurity.repository.DeviceRepository;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.io.Decoders;
+import io.jsonwebtoken.security.Keys;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -33,7 +38,7 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
+//import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -46,6 +51,7 @@ class AccessControlTests {
 
     private static final String DEVICES = "/api/v1/devices";
     private static final String REPORTS = "/api/v1/reports";
+    private static final String AUTHENTICATE = "/api/v1/auth/authenticate";
 
     private static final String NEW_DEVICE = """
             {"name": "switch-04", "type": "switch", "owner": "it-department"}
@@ -60,6 +66,12 @@ class AccessControlTests {
 
     @Autowired
     private DeviceRepository deviceRepository;
+
+    @Value("${application.security.jwt.secret-key}")
+    private String secretKey;
+
+    @Value("${application.security.jwt.expiration}")
+    private long expiration;
 
     private MockMvc mockMvc;
 
@@ -99,42 +111,72 @@ class AccessControlTests {
         }
     }
 
+//    @Nested
+//    class Login {
+//
+//        @Test
+//        void correctPasswordIsAccepted() throws Exception {
+//            assertEquals(200, perform(get(DEVICES).with(httpBasic("user", "user"))).getStatus());
+//        }
+//
+//        @Test
+//        void wrongPasswordIsRejected() throws Exception {
+//            assertUnauthorized(get(DEVICES).with(httpBasic("user", "wrong")));
+//        }
+//
+//        @Test
+//        void unknownUserIsRejected() throws Exception {
+//            assertUnauthorized(get(DEVICES).with(httpBasic("guest", "guest")));
+//        }
+//
+//        @Test
+//        void userAccountHasNoAdminRights() throws Exception {
+//            assertForbidden(get(REPORTS + "/owners").with(httpBasic("user", "user")));
+//        }
+//
+//        @Test
+//        void adminAccountHasAdminRights() throws Exception {
+//            assertEquals(200, perform(get(REPORTS + "/owners").with(httpBasic("admin", "admin"))).getStatus());
+//        }
+//
+//        @Test
+//        void adminAccountHasNoSuperadminRights() throws Exception {
+//            assertForbidden(get(REPORTS + "/audit").with(httpBasic("admin", "admin")));
+//        }
+//
+//        @Test
+//        void superadminAccountHasSuperadminRights() throws Exception {
+//            assertEquals(200, perform(get(REPORTS + "/audit").with(httpBasic("superadmin", "superadmin"))).getStatus());
+//        }
+//    }
+
     @Nested
-    class Login {
+    @WithAnonymousUser(setupBefore = TestExecutionEvent.TEST_EXECUTION)
+    class TokenLogin {
 
         @Test
-        void correctPasswordIsAccepted() throws Exception {
-            assertEquals(200, perform(get(DEVICES).with(httpBasic("user", "user"))).getStatus());
+        void userAccountGetsUserToken() throws Exception {
+            assertToken("k.olena@registry.local", "user", "Olena Koval", "ROLE_USER");
+        }
+
+        @Test
+        void adminAccountGetsAdminToken() throws Exception {
+            assertToken("m.taras@registry.local", "admin", "Taras Melnyk", "ROLE_ADMIN");
+        }
+
+        @Test
+        void superadminAccountGetsSuperadminToken() throws Exception {
+            assertToken("r.vladyslav@registry.local", "superadmin", "Vladyslav Repetovskyi", "ROLE_SUPERADMIN");
         }
 
         @Test
         void wrongPasswordIsRejected() throws Exception {
-            assertUnauthorized(get(DEVICES).with(httpBasic("user", "wrong")));
+            assertUnauthorized(authenticate("m.taras@registry.local", "wrong"));
         }
 
         @Test
-        void unknownUserIsRejected() throws Exception {
-            assertUnauthorized(get(DEVICES).with(httpBasic("guest", "guest")));
-        }
-
-        @Test
-        void userAccountHasNoAdminRights() throws Exception {
-            assertForbidden(get(REPORTS + "/owners").with(httpBasic("user", "user")));
-        }
-
-        @Test
-        void adminAccountHasAdminRights() throws Exception {
-            assertEquals(200, perform(get(REPORTS + "/owners").with(httpBasic("admin", "admin"))).getStatus());
-        }
-
-        @Test
-        void adminAccountHasNoSuperadminRights() throws Exception {
-            assertForbidden(get(REPORTS + "/audit").with(httpBasic("admin", "admin")));
-        }
-
-        @Test
-        void superadminAccountHasSuperadminRights() throws Exception {
-            assertEquals(200, perform(get(REPORTS + "/audit").with(httpBasic("superadmin", "superadmin"))).getStatus());
+        void unknownEmailIsRejected() throws Exception {
+            assertUnauthorized(authenticate("h.petro@registry.local", "user"));
         }
     }
 
@@ -348,10 +390,31 @@ class AccessControlTests {
                 response.getContentAsString());
     }
 
+    private MockHttpServletRequestBuilder authenticate(String email, String password) {
+        return post(AUTHENTICATE)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\": \"%s\", \"password\": \"%s\"}".formatted(email, password));
+    }
+
+    private void assertToken(String email, String password, String fullName, String authority) throws Exception {
+        MockHttpServletResponse response = perform(authenticate(email, password));
+        assertEquals(200, response.getStatus());
+        String token = JsonPath.read(response.getContentAsString(), "$.token");
+        Claims claims = Jwts.parser()
+                .verifyWith(Keys.hmacShaKeyFor(Decoders.BASE64.decode(secretKey)))
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+        assertEquals(email, claims.getSubject());
+        assertEquals(fullName, claims.get("fullName", String.class));
+        assertEquals(List.of(authority), claims.get("authorities", List.class));
+        assertEquals(expiration, claims.getExpiration().getTime() - claims.getIssuedAt().getTime());
+    }
+
     private void assertUnauthorized(MockHttpServletRequestBuilder request) throws Exception {
         MockHttpServletResponse response = perform(request);
         assertEquals(401, response.getStatus());
-        assertEquals("Unauthorized", response.getErrorMessage());
+        assertEquals("", response.getContentAsString());
     }
 
     private void assertForbidden(MockHttpServletRequestBuilder request) throws Exception {
