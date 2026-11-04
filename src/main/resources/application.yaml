@@ -9,3 +9,9 @@ spring:
     host: localhost
     port: 27017
     database: web-security
+
+application:
+  security:
+    jwt:
+      secret-key: 9h+L3YSgxRJFkWyCuxTy7oWDw9hG5WfPwtOt8FnOuRs=
+      expiration: 86400000
