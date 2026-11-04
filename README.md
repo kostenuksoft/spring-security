@@ -1,5 +1,9 @@
-# Lab 7: Access testing
+# Lab 8: JWT token
 
-### src/test/java/com/repetovskyi/websecurity/AccessControlTests.java
+### POST /api/v1/auth/authenticate
 
-![](7/all-tests.png)
+![](8/token-request.png)
+
+### jwt.io
+
+![](8/jwt-io.png)
