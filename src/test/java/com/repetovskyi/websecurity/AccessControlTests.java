@@ -4,17 +4,22 @@ package com.repetovskyi.websecurity;
   @author   Repetovskyi V.
   @project   web-security
   @class  AccessControlTests
-  @version  1.1.0
+  @version  1.2.0
   @since 10/14/2026 - 20.20
 */
 
 import com.jayway.jsonpath.JsonPath;
 import com.repetovskyi.websecurity.model.Device;
 import com.repetovskyi.websecurity.repository.DeviceRepository;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.io.Decoders;
+import io.jsonwebtoken.security.Keys;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -46,6 +51,7 @@ class AccessControlTests {
 
     private static final String DEVICES = "/api/v1/devices";
     private static final String REPORTS = "/api/v1/reports";
+    private static final String AUTHENTICATE = "/api/v1/auth/authenticate";
 
     private static final String NEW_DEVICE = """
             {"name": "switch-04", "type": "switch", "owner": "it-department"}
@@ -60,6 +66,12 @@ class AccessControlTests {
 
     @Autowired
     private DeviceRepository deviceRepository;
+
+    @Value("${application.security.jwt.secret-key}")
+    private String secretKey;
+
+    @Value("${application.security.jwt.expiration}")
+    private long expiration;
 
     private MockMvc mockMvc;
 
@@ -90,12 +102,12 @@ class AccessControlTests {
 
         @Test
         void cannotListDevices() throws Exception {
-            assertForbidden(get(DEVICES));
+            assertUnauthorized(get(DEVICES));
         }
 
         @Test
         void cannotReadAuditReport() throws Exception {
-            assertForbidden(get(REPORTS + "/audit"));
+            assertUnauthorized(get(REPORTS + "/audit"));
         }
     }
 
@@ -137,6 +149,36 @@ class AccessControlTests {
 //            assertEquals(200, perform(get(REPORTS + "/audit").with(httpBasic("superadmin", "superadmin"))).getStatus());
 //        }
 //    }
+
+    @Nested
+    @WithAnonymousUser(setupBefore = TestExecutionEvent.TEST_EXECUTION)
+    class TokenLogin {
+
+        @Test
+        void userAccountGetsUserToken() throws Exception {
+            assertToken("k.olena@registry.local", "user", "Olena Koval", "ROLE_USER");
+        }
+
+        @Test
+        void adminAccountGetsAdminToken() throws Exception {
+            assertToken("m.taras@registry.local", "admin", "Taras Melnyk", "ROLE_ADMIN");
+        }
+
+        @Test
+        void superadminAccountGetsSuperadminToken() throws Exception {
+            assertToken("r.vladyslav@registry.local", "superadmin", "Vladyslav Repetovskyi", "ROLE_SUPERADMIN");
+        }
+
+        @Test
+        void wrongPasswordIsRejected() throws Exception {
+            assertUnauthorized(authenticate("m.taras@registry.local", "wrong"));
+        }
+
+        @Test
+        void unknownEmailIsRejected() throws Exception {
+            assertUnauthorized(authenticate("h.petro@registry.local", "user"));
+        }
+    }
 
     @Nested
     @WithMockUser(username = "user", roles = "USER", setupBefore = TestExecutionEvent.TEST_EXECUTION)
@@ -348,10 +390,31 @@ class AccessControlTests {
                 response.getContentAsString());
     }
 
+    private MockHttpServletRequestBuilder authenticate(String email, String password) {
+        return post(AUTHENTICATE)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\": \"%s\", \"password\": \"%s\"}".formatted(email, password));
+    }
+
+    private void assertToken(String email, String password, String fullName, String authority) throws Exception {
+        MockHttpServletResponse response = perform(authenticate(email, password));
+        assertEquals(200, response.getStatus());
+        String token = JsonPath.read(response.getContentAsString(), "$.token");
+        Claims claims = Jwts.parser()
+                .verifyWith(Keys.hmacShaKeyFor(Decoders.BASE64.decode(secretKey)))
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+        assertEquals(email, claims.getSubject());
+        assertEquals(fullName, claims.get("fullName", String.class));
+        assertEquals(List.of(authority), claims.get("authorities", List.class));
+        assertEquals(expiration, claims.getExpiration().getTime() - claims.getIssuedAt().getTime());
+    }
+
     private void assertUnauthorized(MockHttpServletRequestBuilder request) throws Exception {
         MockHttpServletResponse response = perform(request);
         assertEquals(401, response.getStatus());
-        assertEquals("Unauthorized", response.getErrorMessage());
+        assertEquals("", response.getContentAsString());
     }
 
     private void assertForbidden(MockHttpServletRequestBuilder request) throws Exception {
