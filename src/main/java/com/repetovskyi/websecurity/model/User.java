@@ -4,7 +4,7 @@ package com.repetovskyi.websecurity.model;
   @author   Repetovskyi V.
   @project   web-security
   @class  User
-  @version  1.0.0 
+  @version  1.1.0
   @since 11/1/2026 - 08.24
 */
 
@@ -58,5 +58,9 @@ public class User implements UserDetails {
     @Override
     public boolean isEnabled() {
         return enabled;
+    }
+
+    public String getFullName() {
+        return firstName + " " + lastName;
     }
 }
