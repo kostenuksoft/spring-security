@@ -4,11 +4,13 @@ package com.repetovskyi.websecurity.config;
   @author   Repetovskyi V.
   @project   web-security
   @class  BeansConfiguration
-  @version  1.1.0
+  @version  1.2.0
   @since 11/1/2026 - 09.06
 */
 
+import com.repetovskyi.websecurity.filter.JwtFilter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -40,5 +42,12 @@ public class BeansConfiguration {
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
         return configuration.getAuthenticationManager();
+    }
+
+    @Bean
+    public FilterRegistrationBean<JwtFilter> jwtFilterRegistration(JwtFilter jwtFilter) {
+        FilterRegistrationBean<JwtFilter> registration = new FilterRegistrationBean<>(jwtFilter);
+        registration.setEnabled(false);
+        return registration;
     }
 }

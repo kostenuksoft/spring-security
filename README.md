@@ -1,9 +1,21 @@
-# Lab 8: JWT token
+# Lab 9: JWT access
 
-### POST /api/v1/auth/authenticate
+![](9/1.png)
 
-![](8/token-request.png)
+![](9/2.png)
 
-### jwt.io
+![](9/3.png)
 
-![](8/jwt-io.png)
+![](9/4.png)
+
+![](9/5.png)
+
+![](9/6.png)
+
+![](9/7.png)
+
+![](9/8.png)
+
+![](9/9.png)
+
+![](9/10.png)

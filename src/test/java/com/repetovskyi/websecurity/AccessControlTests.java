@@ -4,7 +4,7 @@ package com.repetovskyi.websecurity;
   @author   Repetovskyi V.
   @project   web-security
   @class  AccessControlTests
-  @version  1.2.0
+  @version  1.3.0
   @since 10/14/2026 - 20.20
 */
 
@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.test.context.support.TestExecutionEvent;
@@ -32,6 +33,8 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
+import javax.crypto.SecretKey;
+import java.util.Date;
 import java.util.List;
 import java.util.Set;
 
@@ -52,6 +55,9 @@ class AccessControlTests {
     private static final String DEVICES = "/api/v1/devices";
     private static final String REPORTS = "/api/v1/reports";
     private static final String AUTHENTICATE = "/api/v1/auth/authenticate";
+    private static final String USER_EMAIL = "k.olena@registry.local";
+    private static final String ADMIN_EMAIL = "m.taras@registry.local";
+    private static final String SUPERADMIN_EMAIL = "r.vladyslav@registry.local";
 
     private static final String NEW_DEVICE = """
             {"name": "switch-04", "type": "switch", "owner": "it-department"}
@@ -177,6 +183,67 @@ class AccessControlTests {
         @Test
         void unknownEmailIsRejected() throws Exception {
             assertUnauthorized(authenticate("h.petro@registry.local", "user"));
+        }
+    }
+
+    @Nested
+    class BearerToken {
+
+        @Test
+        void requestWithoutTokenIsRejected() throws Exception {
+            assertUnauthorized(get(DEVICES));
+        }
+
+        @Test
+        void userTokenCanListDevices() throws Exception {
+            MockHttpServletResponse response = perform(get(DEVICES).header(HttpHeaders.AUTHORIZATION, bearer(USER_EMAIL, "user")));
+            assertEquals(200, response.getStatus());
+            List<String> names = JsonPath.read(response.getContentAsString(), "$[*].name");
+            assertEquals(Set.of("router-01", "printer-02", "laptop-03"), Set.copyOf(names));
+        }
+
+        @Test
+        void userTokenCannotCreateDevice() throws Exception {
+            assertForbidden(createDevice().header(HttpHeaders.AUTHORIZATION, bearer(USER_EMAIL, "user")));
+            assertEquals(3, deviceRepository.count());
+        }
+
+        @Test
+        void adminTokenCreatesDeviceAsTokenSubject() throws Exception {
+            MockHttpServletResponse response = perform(createDevice().header(HttpHeaders.AUTHORIZATION, bearer(ADMIN_EMAIL, "admin")));
+            assertEquals(201, response.getStatus());
+            Device created = stored(JsonPath.read(response.getContentAsString(), "$.id"));
+            assertEquals(ADMIN_EMAIL, created.getCreatedBy());
+            assertEquals(4, deviceRepository.count());
+        }
+
+        @Test
+        void adminTokenCannotDeleteDevice() throws Exception {
+            assertForbidden(delete(DEVICES + "/1").header(HttpHeaders.AUTHORIZATION, bearer(ADMIN_EMAIL, "admin")));
+            assertTrue(deviceRepository.existsById("1"));
+        }
+
+        @Test
+        void superadminTokenCanDeleteDevice() throws Exception {
+            MockHttpServletResponse response = perform(delete(DEVICES + "/3").header(HttpHeaders.AUTHORIZATION, bearer(SUPERADMIN_EMAIL, "superadmin")));
+            assertEquals(204, response.getStatus());
+            assertFalse(deviceRepository.existsById("3"));
+        }
+
+        @Test
+        void tamperedTokenIsRejected() throws Exception {
+            String token = bearer(SUPERADMIN_EMAIL, "superadmin");
+            assertUnauthorized(get(DEVICES).header(HttpHeaders.AUTHORIZATION, token.substring(0, token.length() - 2) + "xx"));
+        }
+
+        @Test
+        void expiredTokenIsRejected() throws Exception {
+            assertUnauthorized(get(DEVICES).header(HttpHeaders.AUTHORIZATION, "Bearer " + signedToken(SUPERADMIN_EMAIL, -60_000)));
+        }
+
+        @Test
+        void tokenOfUnknownUserIsRejected() throws Exception {
+            assertUnauthorized(get(DEVICES).header(HttpHeaders.AUTHORIZATION, "Bearer " + signedToken("h.petro@registry.local", 60_000)));
         }
     }
 
@@ -401,7 +468,7 @@ class AccessControlTests {
         assertEquals(200, response.getStatus());
         String token = JsonPath.read(response.getContentAsString(), "$.token");
         Claims claims = Jwts.parser()
-                .verifyWith(Keys.hmacShaKeyFor(Decoders.BASE64.decode(secretKey)))
+                .verifyWith(signingKey())
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
@@ -409,6 +476,25 @@ class AccessControlTests {
         assertEquals(fullName, claims.get("fullName", String.class));
         assertEquals(List.of(authority), claims.get("authorities", List.class));
         assertEquals(expiration, claims.getExpiration().getTime() - claims.getIssuedAt().getTime());
+    }
+
+    private String bearer(String email, String password) throws Exception {
+        MockHttpServletResponse response = perform(authenticate(email, password));
+        return "Bearer " + JsonPath.read(response.getContentAsString(), "$.token");
+    }
+
+    private String signedToken(String email, long expiresInMillis) {
+        long now = System.currentTimeMillis();
+        return Jwts.builder()
+                .subject(email)
+                .issuedAt(new Date(now))
+                .expiration(new Date(now + expiresInMillis))
+                .signWith(signingKey())
+                .compact();
+    }
+
+    private SecretKey signingKey() {
+        return Keys.hmacShaKeyFor(Decoders.BASE64.decode(secretKey));
     }
 
     private void assertUnauthorized(MockHttpServletRequestBuilder request) throws Exception {

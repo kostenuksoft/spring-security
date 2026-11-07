@@ -4,10 +4,11 @@ package com.repetovskyi.websecurity.config;
   @author   Repetovskyi V.
   @project   web-security
   @class  SecurityConfig
-  @version  1.4.0
+  @version  1.5.0
   @since 9/27/2026 - 20.45
 */
 
+import com.repetovskyi.websecurity.filter.JwtFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,6 +21,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
@@ -32,6 +34,7 @@ public class SecurityConfig {
 //    private static final String SUPERADMIN = "SUPERADMIN";
 
     private final AuthenticationProvider authenticationProvider;
+    private final JwtFilter jwtFilter;
 
 //    @Bean
 //    public PasswordEncoder passwordEncoder() {
@@ -56,7 +59,8 @@ public class SecurityConfig {
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authenticationProvider(authenticationProvider);
+                .authenticationProvider(authenticationProvider)
+                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
