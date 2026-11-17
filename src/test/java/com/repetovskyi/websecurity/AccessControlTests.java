@@ -4,7 +4,7 @@ package com.repetovskyi.websecurity;
   @author   Repetovskyi V.
   @project   web-security
   @class  AccessControlTests
-  @version  1.3.0
+  @version  1.4.0
   @since 10/14/2026 - 20.20
 */
 
@@ -18,9 +18,12 @@ import io.jsonwebtoken.security.Keys;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -184,6 +187,16 @@ class AccessControlTests {
         void unknownEmailIsRejected() throws Exception {
             assertUnauthorized(authenticate("h.petro@registry.local", "user"));
         }
+
+        @Test
+        void lockedAccountIsRejected() throws Exception {
+            assertUnauthorized(authenticate("b.andrii@registry.local", "user"));
+        }
+
+        @Test
+        void disabledAccountIsRejected() throws Exception {
+            assertUnauthorized(authenticate("s.iryna@registry.local", "user"));
+        }
     }
 
     @Nested
@@ -244,6 +257,33 @@ class AccessControlTests {
         @Test
         void tokenOfUnknownUserIsRejected() throws Exception {
             assertUnauthorized(get(DEVICES).header(HttpHeaders.AUTHORIZATION, "Bearer " + signedToken("h.petro@registry.local", 60_000)));
+        }
+    }
+
+    @Nested
+    @ExtendWith(OutputCaptureExtension.class)
+    class DeleteAudit {
+
+        private static final String DELETE_LOG =
+                "Device 3 (laptop-03, laptop, owner r.vladyslav) deleted by " + SUPERADMIN_EMAIL;
+
+        @Test
+        void deleteIsLoggedWithTokenSubject(CapturedOutput output) throws Exception {
+            perform(delete(DEVICES + "/3").header(HttpHeaders.AUTHORIZATION, bearer(SUPERADMIN_EMAIL, "superadmin")));
+            assertTrue(output.getOut().contains(DELETE_LOG));
+        }
+
+        @Test
+        void forbiddenDeleteIsNotLogged(CapturedOutput output) throws Exception {
+            assertForbidden(delete(DEVICES + "/3").header(HttpHeaders.AUTHORIZATION, bearer(ADMIN_EMAIL, "admin")));
+            assertFalse(output.getOut().contains("deleted by"));
+        }
+
+        @Test
+        void deleteOfMissingDeviceIsNotLogged(CapturedOutput output) throws Exception {
+            MockHttpServletResponse response = perform(delete(DEVICES + "/99").header(HttpHeaders.AUTHORIZATION, bearer(SUPERADMIN_EMAIL, "superadmin")));
+            assertEquals(404, response.getStatus());
+            assertFalse(output.getOut().contains("deleted by"));
         }
     }
 
