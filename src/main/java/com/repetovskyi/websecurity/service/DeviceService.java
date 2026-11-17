@@ -4,7 +4,7 @@ package com.repetovskyi.websecurity.service;
   @author   Repetovskyi V.
   @project   web-security
   @class  DeviceService
-  @version  1.1.0
+  @version  1.2.0
   @since 9/12/2026 - 19.07
 */
 
@@ -12,17 +12,21 @@ import com.repetovskyi.websecurity.model.Device;
 import com.repetovskyi.websecurity.repository.DeviceRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.AuditorAware;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class DeviceService {
 
     private final DeviceRepository deviceRepository;
+    private final AuditorAware<String> auditorAware;
 
     @PostConstruct
     void init() {
@@ -57,10 +61,15 @@ public class DeviceService {
     }
 
     public boolean delete(String id) {
-        if (!deviceRepository.existsById(id)) {
+        Optional<Device> device = deviceRepository.findById(id);
+        if (device.isEmpty()) {
             return false;
         }
         deviceRepository.deleteById(id);
+        Device deleted = device.get();
+        log.info("Device {} ({}, {}, owner {}) deleted by {}",
+                deleted.getId(), deleted.getName(), deleted.getType(), deleted.getOwner(),
+                auditorAware.getCurrentAuditor().orElseThrow());
         return true;
     }
 }
